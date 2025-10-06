@@ -111,28 +111,27 @@ export class NBIAPI {
   }
 
   static async initializeWebsocket() {
-    const serverSettings = ServerConnection.makeSettings();
-    const wsUrl = URLExt.join(
-      serverSettings.wsUrl,
-      'notebook-intelligence',
-      'copilot'
-    );
+    const settings = ServerConnection.makeSettings();
 
-    this._webSocket = new serverSettings.WebSocket(wsUrl);
-    this._webSocket.onmessage = msg => {
-      this._messageReceived.emit(msg.data);
-    };
+    // Build the WS path under the single-user base
+    const base = URLExt.join(settings.wsUrl, 'api', 'notebook-intelligence', 'copilot');
 
-    this._webSocket.onerror = msg => {
-      console.error(`Websocket error: ${msg}. Closing...`);
+    // Add the token so auth works reliably behind the proxy
+    const url = settings.token ? `${base}?token=${encodeURIComponent(settings.token)}` : base;
+
+    const WebSocketFactory =
+      // JL sets this to window.WebSocket in browser; fall back just in case
+      (settings as any).WebSocket ?? WebSocket;
+
+    this._webSocket = new WebSocketFactory(url);
+    this._webSocket.onmessage = msg => this._messageReceived.emit(msg.data);
+    this._webSocket.onerror = ev => {
+      console.error('WebSocket error', ev);
       this._webSocket.close();
     };
-
-    this._webSocket.onclose = msg => {
-      console.log(`Websocket is closed: ${msg.reason}. Reconnecting...`);
-      setTimeout(() => {
-        NBIAPI.initializeWebsocket();
-      }, 1000);
+    this._webSocket.onclose = ev => {
+      console.log(`WebSocket closed code=${ev.code} reason=${ev.reason}; reconnecting…`);
+      setTimeout(() => NBIAPI.initializeWebsocket(), 1000 + Math.random() * 1000);
     };
   }
 
