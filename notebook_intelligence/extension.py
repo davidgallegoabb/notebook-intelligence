@@ -1,6 +1,7 @@
 # Copyright (c) Mehmet Bektas <mbektasgh@outlook.com>
 
 import asyncio
+from asyncio import AbstractEventLoop
 from dataclasses import dataclass
 import json
 from os import path
@@ -13,10 +14,10 @@ import logging
 import tiktoken
 
 from jupyter_server.extension.application import ExtensionApp
-from jupyter_server.base.handlers import APIHandler
+from jupyter_server.base.handlers import APIHandler, JupyterHandler
 from jupyter_server.utils import url_path_join
 import tornado
-from tornado import websocket
+from tornado import websocket, ioloop
 from traitlets import Unicode
 from notebook_intelligence.api import BuiltinToolset, CancelToken, ChatMode, ChatResponse, ChatRequest, ContextRequest, ContextRequestType, RequestDataType, RequestToolSelection, ResponseStreamData, ResponseStreamDataType, BackendMessageType, SignalImpl
 from notebook_intelligence.ai_service_manager import AIServiceManager
@@ -447,7 +448,16 @@ class MessageCallbackHandlers:
     response_emitter: WebsocketCopilotResponseEmitter
     cancel_token: CancelTokenImpl
 
-class WebsocketCopilotHandler(websocket.WebSocketHandler):
+class WebsocketCopilotHandler(JupyterHandler, websocket.WebSocketHandler):
+    ##
+    # Definition of base class
+    ##
+    handler_kind = "completion"
+
+    @property
+    def loop(self) -> AbstractEventLoop:
+        return self.settings["jai_event_loop"]
+    
     def __init__(self, application, request, **kwargs):
         super().__init__(application, request, **kwargs)
         # TODO: cleanup
@@ -455,10 +465,37 @@ class WebsocketCopilotHandler(websocket.WebSocketHandler):
         self.chat_history = ChatHistory()
         github_copilot.websocket_connector = ThreadSafeWebSocketConnector(self)
 
-    def open(self):
-        pass
+    def pre_get(self):
+        """Handles authentication/authorization."""
+        # authenticate the request before opening the websocket
+        user = self.current_user
+        if user is None:
+            self.log.warning("Couldn't authenticate WebSocket connection")
+            raise tornado.web.HTTPError(403)
+
+        # authorize the user.
+        if not self.authorizer.is_authorized(self, user, "execute", "events"):
+            raise tornado.web.HTTPError(403)
+
+    async def get(self, *args, **kwargs):
+        """Get an event socket."""
+        self.pre_get()
+        res = super().get(*args, **kwargs)
+        await res
+
+    def initialize(self):
+        self.log.debug("Initializing websocket connection %s", self.request.path)
+
+    def on_close(self):
+        if hasattr(self, "_ping_cb"):
+            try: self._ping_cb.stop()
+            except Exception: pass
+        self.application.log.info("NI WS closed code=%s reason=%s", self.close_code, self.close_reason)
 
     def on_message(self, message):
+        """Public Tornado method that is called when the client sends a message
+        over this connection. This should **not** be overriden by subclasses."""
+
         msg = json.loads(message)
 
         messageId = msg['id']
@@ -565,7 +602,7 @@ class WebsocketCopilotHandler(websocket.WebSocketHandler):
             handlers.cancel_token.cancel_request()
  
     def on_close(self):
-        pass
+        self.application.log.info("NI WS closed code=%s reason=%s", self.close_code, self.close_reason)
 
     async def handle_inline_completions(prefix, suffix, language, filename, response_emitter, cancel_token):
         if ai_service_manager.inline_completion_model is None:
@@ -645,7 +682,7 @@ class NotebookIntelligence(ExtensionApp):
         route_pattern_github_login_status = url_path_join(base_url, "notebook-intelligence", "gh-login-status")
         route_pattern_github_login = url_path_join(base_url, "notebook-intelligence", "gh-login")
         route_pattern_github_logout = url_path_join(base_url, "notebook-intelligence", "gh-logout")
-        route_pattern_copilot = url_path_join(base_url, "notebook-intelligence", "copilot")
+        route_pattern_copilot = url_path_join(base_url, "api", "notebook-intelligence", "copilot")
         GetCapabilitiesHandler.notebook_execute_tool = self.notebook_execute_tool
         NotebookIntelligence.handlers = [
             (route_pattern_capabilities, GetCapabilitiesHandler),
