@@ -1,0 +1,343 @@
+def get_dataframe_multiple_signals(plant: str, mill: str, internal_tags: list, init: datetime.datetime = None, end: datetime.datetime = None, pType: str = None) -> pandas.core.frame.DataFrame | None:
+"""
+    It retrieves a pandas dataframe with multiple slow trend signals data for a specific mill (a.k.a. motor or root equipment) and plant (a.k.a. customer) within a given time range.
+
+    Parameters:
+        plant (str): Plant identifier (same as customer).
+        mill (str): Mill identifier (same as root equipment or motor).
+        internal_tags (list): List of internal tag names, from metadata.
+        init (datetime): Start datetime for the query.
+        end (datetime): End datetime for the query.
+        pType (str, optional): valid values are 'M01', 'M15', 'M30', 'HRS', 'DAY' or 'WEK'. If not specified in the requred, calculated by api.
+
+    Returns:
+        pd.DataFrame or None: DataFrame with a column per signal data (the key is the internal tag) or None if no data and index the timestamp.
+
+    Example of use:
+
+    plant = "ABBMINE"
+    root_equipment = "BM1"    
+    internal_tags = ["GMD_MOT_SPD_ACT", "GMD_MOT_POW"]
+    init = datetime(2024, 1, 1)
+    end = datetime(2024, 1, 2)    
+    df_multiple_signals = get_dataframe_multiple_signals(
+        plant, root_equipment, internal_tags, init, end
+    )
+    print(df_multiple_signals.head())    
+    """
+
+def get_dataframe_one_signal(plant: str, mill: str, internal_tag: str, init: datetime.datetime = None, end: datetime.datetime = None, pType: str = None) -> pandas.core.frame.DataFrame | None:
+"""
+    It retrieves slow trend signal data for a specific mill (a.k.a. motor or root equipment) and plant in a customer (a.k.a. customer) and returns a dataframe within a given date range.
+
+    Parameters:
+        plant (str): Plant identifier.
+        mill (str): Mill identifier.
+        internal_tag (str): Internal tag name to get the signal for, from method get_internal_tag or get_metadata properties.
+        init (datetime): Start datetime for the query.
+        end (datetime): End datetime for the query.
+        pType (str, optional): valid values are 'M01', 'M15', 'M30', 'HRS', 'DAY' or 'WEK'. If not specified in the requred, calculated by api.
+
+    Returns:
+        pd.DataFrame or None: DataFrame with signal data (the key is the internal tag) of None if no data and index the timestamp.
+
+    Example of use:
+
+    signal_tag = get_internal_tag("ABBMINE", "BM1", "Speed")
+    init = datetime(2024, 1, 1)
+    end = datetime(2024, 1, 2)
+    df_one_signal = get_dataframe_one_signal(customer, motor, signal_tag, init, end, 'M15')
+    print(df_one_signal.head())    
+    """
+
+def get_events(plant: str, mill: str, init: datetime.datetime = None, end: datetime.datetime = None) -> list:
+"""
+    It gets a list of alarms, events and trips for a specific mill (a.k.a. motor or root equipment) and plant (a.k.a. customer) within a given time range.
+
+    Parameters:
+        plant (str): Plant identifier.
+        mill (str): Mill identifier.
+        init (datetime): Start datetime for the query.
+        end (datetime): End datetime for the query.
+
+    Returns:
+        list: List of alarms, events and trips. It objects have the following fields:
+            - timestampUTC: UTC timestamp of the event.
+            - timestampLocalTime: Local time timestamp of the event.
+            - source: Source of the event.
+            - category: Alarm, Event or Trip.
+            - isInitialTrip: Indicates if the event is an initial trip, the one who caused the motor to stop.
+            - message: Message describing the event.
+            - active: Indicates if the event is active or not.
+            - enabled: Indicates if the event is enabled or not.
+            - ack: Indicates if the event is acknowledged or not.
+
+    Example of use:
+
+    customer = "ABBMINE"
+    motor = "BM1"    
+    init = datetime(2024, 1, 1)
+    end = datetime(2024, 1, 2)    
+
+    events = get_events(customer, motor, init, end)
+    print("Events (Alarms, Events, Trips):")
+    for event in events:
+        print(event)
+    """
+
+def get_ft(plant: str, mill: str, dt: datetime.datetime) -> pandas.core.frame.DataFrame | None:
+"""
+    It gets a DataFrame with fast trending recording for a specific mill (a.k.a. motor or root equipment) and plant (a.k.a. customer) at a given datetime.
+
+    Parameters:
+        plant (str): Plant identifier.
+        mill (str): Mill identifier.
+        dt (datetime): Center datetime for fast trending data.
+
+    Returns:
+        pd.DataFrame or None: DataFrame with fast trending data or None if no data.
+
+    Example of use:
+
+    customer = "ABBMINE"
+    motor = "BM1"    
+
+    ft_times = get_ft_times(customer, motor)    
+
+    # Example: Use the first available fast trending time if available
+    if ft_times:
+        dt = pd.to_datetime(ft_times[0])
+        ft_df = get_ft(customer, motor, dt)
+        print(ft_df.head())
+    else:
+        print("No fast trending session times available.")    
+    """
+
+def get_ft_times(plant: str, mill: str) -> list:
+"""
+    It gets a list of fast trending session recording start times for a specific mill (a.k.a. motor or root equipment) and plant (a.k.a. customer)
+
+    Parameters:
+        customer (str): Customer identifier.
+        mill (str): Mill identifier.
+
+    Returns:
+        list: List of fast trending recording start times.
+
+    Example of use:
+
+    customer = "ABBMINE"
+    motor = "BM1"    
+
+    ft_times = get_ft_times(customer, motor)
+    print("Fast Trending Session Start Times:")
+    for t in ft_times:
+        print(t)    
+    """
+
+def get_internal_tag(plant: str, mill: str, description: str) -> str | None:
+"""
+    It retrieves the internal tag for a specific mill (a.k.a. root equipment or motor) in a plant (a.k.a. customer) based on the description.
+    Note: 'plant' is the same as 'customer', and 'mill' is the same as 'root equipment' or 'motor'.
+
+    Parameters:
+        plant (str): The plant identifier.
+        mill (str): The mill identifier.
+        description (str): The description to do a contain match of the property.
+
+    Returns:
+        str or None: The internal tag if found, otherwise None.        
+
+
+    Example of use:
+
+    signal_tag = get_internal_tag("ABBMINE", "BM1", "Speed")
+    """
+
+def get_metadata(plant: str, mill: str) -> list:
+"""
+    It retrieves the metadata properties and attributes for a specific mill (a.k.a. root equipment or motor) in a plant (a.k.a. customer).
+    Note: 'plant' is the same as 'customer', and 'mill' is the same as 'root equipment' or 'motor'.
+
+    Parameters:
+        plant (str): The plant identifier.
+        mill (str): The mill identifier.
+
+    Returns:
+        list: List of properties (metadata) associated to plant and mill.
+
+    Example of use:
+
+    customer = "ABBMINE"
+    motor = "BM1"
+
+    metadata = get_metadata(customer, motor)
+
+    """
+
+def get_plants_and_mills() -> list:
+"""
+    Retrieve the list of plants (a.k.a. customer) and mills (a.k.a. root equipment or motor) for which the user has access.
+    Note: 'plant' is the same as 'customer', and 'mill' is the same as 'root equipment' or 'motor'.
+
+    Returns:
+        list: List of tuples containing plant and mill. For Example: [("Plant", "Mill1"), ("Plant", "Mill2")].
+
+    Example of use:
+
+    plants_and_mills = get_plants_and_mills()
+    print("Available Plants and Mills:")
+    for project, system in plants_and_mills:
+        print(f"Project: {project}, System: {system}")
+
+    """
+
+def get_running_history(plant: str, mill: str, init: datetime.datetime, end: datetime.datetime) -> list:
+"""
+    It gets a list of json objects with the running history entries for a specific mill (a.k.a. motor or root equipment) and plant (a.k.a. customer) within a given time range.
+
+    Parameters:
+        plant (str): Plant identifier.
+        mill (str): Mill identifier.
+        init (datetime): Start datetime.
+        end (datetime): End datetime.
+
+    Returns:
+        list: List of running history entries. Each entry contains the following fields:
+            - startingEvent: Event that started the running period.
+            - endingEvent: Event that ended the running period.
+            - duration: Duration of the running period in a string format (e.g., "5.11:12:37").
+            - statusString: Status of the running period (e.g., "Running", "Tripped", etc.).
+
+    Example of use:
+
+    customer = "ABBMINE"
+    motor = "BM1"    
+
+    running_history = get_running_history(customer, motor, init, end)
+    print("Running History Entries:")
+    for entry in running_history:
+        print(entry)
+    """
+
+def get_tr(plant: str, mill: str, recording_id: str) -> dict:
+"""
+    It gets a list of dataframe with transient recordings of high frequency data for tasks A, B, and C for a specific mill (a.k.a. motor or root equipment) and plant (a.k.a. customer)
+
+    Parameters:
+        plant (str): Plant identifier.
+        mill (str): Mill identifier.
+        recording_id (str): Recording ID.
+
+    Returns:
+        dict: Dictionary with DataFrames for tasks A, B, and C. The index of the DataFrames is the delta from the trigger in seconds.
+
+    Example of use:
+
+    customer = "ABBMINE"
+    motor = "BM1"        
+
+    recording_id = "2025_09_21_14_00_58"
+    trs_tasks = get_tr(customer, motor, recording_id)
+    print("Task A DataFrame:")
+    print(trs_tasks["A"].head() if trs_tasks["A"] is not None else "No data")
+    print("Task B DataFrame:")
+    print(trs_tasks["B"].head() if trs_tasks["B"] is not None else "No data")
+    print("Task C DataFrame:")
+    print(trs_tasks["C"].head() if trs_tasks["C"] is not None else "No data")    
+    """
+
+def get_trs(plant: str, mill: str, init: datetime.datetime, end: datetime.datetime = datetime.datetime(2025, 10, 7, 13, 38, 54, 531301)) -> list:
+"""
+    It gets a list of transient recordings for a specific mill (a.k.a. motor or root equipment) and plant (a.k.a. customer) within a given time range.
+    NOTE: A transient recording is a recording of high frequency data that gets registered every time that there is a trip.
+
+    Parameters:
+        plant (str): Plant identifier.
+        mill (str): Mill identifier.
+        init (datetime): Start datetime for the query.
+        end (datetime): End datetime for the query.
+
+    Returns:
+        list: List of transient recorder file recordings.
+
+    Example of use:
+
+    customer = "ABBMINE"
+    motor = "BM1"    
+    init = datetime(2024, 1, 1)
+    end = datetime(2024, 1, 2)       
+    trs_recordings = get_trs(customer, motor, init, end)
+    print("Available Transient Recorder File Recordings:")
+    for rec in trs_recordings:
+        print(rec)    
+    """
+
+def get_trs_with_matching_events(plant: str, mill: str, init: datetime.datetime, end: datetime.datetime) -> list:
+"""
+    It gets a list of transient recorder recordings (high frequency data) matching triggering between event and recording if possible for a mill (a.k.a. motor or root equipment) and plant (a.k.a. customer).
+    This function matches transient recorder recordings with events based on the closest timestamp within a 100 ms delta.,
+
+    Parameters:
+        plant (str): Plant identifier.
+        mill (str): Mill identifier.
+        init (datetime): Start datetime for the query.
+        end (datetime): End datetime for the query.
+
+    Returns:
+        list: List of matched transient recorder recordings and events. It objects have the following fields:
+            - recordingId: ID of the transient recorder recording.
+            - triggerDateTimeUTC: UTC timestamp of the transient recorder trigger.
+            - triggerDateTimeLocalTime: Local time timestamp of the transient recorder trigger.
+            - source: Source of the event.
+            - message: Message describing the event.
+            - delta: Time difference in milliseconds between the transient recorder trigger and the event timestamp.
+            - bits: Dictionary of bits associated with the transient recorder trigger, if available.
+            - anyTripBitOn: Indicates if any trip bit is on, if available.
+            - anyStatorCBIsClosed: Indicates if any stator circuit breaker is closed, if available.
+
+    Example of use:
+
+    customer = "ABBMINE"
+    motor = "BM1"    
+    init = datetime(2024, 1, 1)
+    end = datetime(2024, 1, 2)   
+    
+    matched_trs_events = get_trs_with_matching_events(customer, motor, init, end)
+    print("Matched Transient Recordings with Events:")
+    for match in matched_trs_events:
+        print(match)    
+    """
+
+def render_gantt_running_history(plant: str, mill: str, init: datetime.datetime, end: datetime.datetime) -> None:
+"""
+    It renders a Gantt chart of the running history for a specific mill (a.k.a. motor or root equipment) and plant (a.k.a. customer) within a given time range.
+
+    Parameters:
+        plant (str): Plant identifier.
+        mill (str): Mill identifier.
+        init (datetime): Start datetime.
+        end (datetime): End datetime.
+
+    Returns:
+        None
+    """
+
+def render_task(df: pandas.core.frame.DataFrame) -> None:
+"""
+    It renders a fast trending dataframe with a Plotly subplot for each column (signal) in the dataframe.
+
+    Parameters:
+        df (pd.DataFrame): DataFrame to plot.
+
+    Returns:
+        None
+
+    Example of use:
+
+    # Example: Visualize Task A if available
+    if trs_tasks["A"] is not None:
+        render_task(trs_tasks["A"])
+    else:
+        print("No Task A data to plot.")    
+    """

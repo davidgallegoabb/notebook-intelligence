@@ -9,6 +9,7 @@ import base64
 import logging
 from notebook_intelligence.built_in_toolsets import built_in_toolsets
 
+from pathlib import Path
 from notebook_intelligence.util import extract_llm_generated_code
 
 log = logging.getLogger(__name__)
@@ -318,11 +319,11 @@ class BaseChatParticipant(ChatParticipant):
     
     @property
     def name(self) -> str:
-        return "AI Assistant"
+        return "GMD Connect AI Code Assistant"
 
     @property
     def description(self) -> str:
-        return "AI Assistant"
+        return "GMD Connect AI Code Assistant helps you to analyze condition monitoring data in Python using Jupyter notebooks."
     
     @property
     def icon_path(self) -> str:
@@ -373,7 +374,7 @@ class BaseChatParticipant(ChatParticipant):
         chat_model = request.host.chat_model
         messages = request.chat_history.copy()
         messages.pop()
-        messages.insert(0, {"role": "system", "content": f"You are an assistant that creates Python code which will be used in a Jupyter notebook. Generate only Python code and some comments for the code. You should return the code directly, without wrapping it inside ```."})
+        messages.insert(0, {"role": "system", "content": f"You are an GMD Connect code assistant that creates Python code to analyze condition monitoring data which will be used in a Jupyter notebook. Generate only Python code and some comments for the code. You should return the code directly, without wrapping it inside ```."})
         messages.append({"role": "user", "content": f"Generate code for: {request.prompt}"})
         generated = chat_model.completions(messages)
         code = generated['choices'][0]['message']['content']
@@ -412,7 +413,7 @@ class BaseChatParticipant(ChatParticipant):
                         system_prompt += ext_toolset.instructions + "\n"
 
             options = options.copy()
-            options["system_prompt"] = system_prompt
+            options["system_prompt"] = self.chat_prompt(request.host.chat_model.provider.name, request.host.chat_model.name)  + "\n" + system_prompt
 
             mcp_servers_used = []
             for server_name in request.tool_selection.mcp_server_tools.keys():

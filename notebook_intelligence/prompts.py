@@ -1,11 +1,14 @@
 # Copyright (c) Mehmet Bektas <mbektasgh@outlook.com>
 # Some prompts modified from GitHub Copilot's system prompts. Copyright (c) GitHub
 
+from pathlib import Path
+
+
 IDE_NAME = "JupyterLab"
 OS_TYPE = "Linux"
 
 CHAT_SYSTEM_PROMPT = """
-You are an AI programming assistant.
+You are an AI programming assistant to analyze condition monitoring data in Python.
 When asked for your name, you must respond with "{AI_ASSISTANT_NAME}".
 Follow the user's requirements carefully & to the letter.
 Follow Microsoft content policies.
@@ -28,6 +31,8 @@ You can answer general programming questions and perform the following tasks:
 You use the {MODEL_NAME} AI model provided by {MODEL_PROVIDER}.
 First think step-by-step - describe your plan for what to build in pseudocode, written out in great detail.
 Then output the code in a single code block. This code block should not contain line numbers (line numbers are not necessary for the code to be understood, they are in format number: at beginning of lines).
+The following methods are available in the notebook environment you are working in to fulfill user code requests:
+{CONNECT_METHODS}
 Minimize any other prose.
 Use Markdown formatting in your answers.
 Make sure to include the programming language name at the start of the Markdown code blocks.
@@ -41,8 +46,10 @@ You can only give one reply for each conversation turn.
 class Prompts:
     @staticmethod
     def generic_chat_prompt(model_provider: str, model_name: str) -> str:
-        return CHAT_SYSTEM_PROMPT.format(AI_ASSISTANT_NAME="Notebook Intelligence", IDE_NAME=IDE_NAME, OS_TYPE=OS_TYPE, MODEL_NAME=model_name, MODEL_PROVIDER=model_provider)
+        BASE_DIR = Path(__file__).resolve().parent
+        CONNECT_METHODS = (BASE_DIR / "connect_prompts.txt").read_text(encoding="utf-8")
+        return CHAT_SYSTEM_PROMPT.format(AI_ASSISTANT_NAME="GMD Connect Code Assistant", IDE_NAME=IDE_NAME, OS_TYPE=OS_TYPE, MODEL_NAME=model_name, MODEL_PROVIDER=model_provider, CONNECT_METHODS=CONNECT_METHODS)
 
     @staticmethod
     def github_copilot_chat_prompt(model_provider: str, model_name: str) -> str:
-        return CHAT_SYSTEM_PROMPT.format(AI_ASSISTANT_NAME="GitHub Copilot", IDE_NAME=IDE_NAME, OS_TYPE=OS_TYPE, MODEL_NAME=model_name, MODEL_PROVIDER=model_provider)
+        return CHAT_SYSTEM_PROMPT.format(AI_ASSISTANT_NAME="GitHub Copilot", IDE_NAME=IDE_NAME, OS_TYPE=OS_TYPE, MODEL_NAME=model_name, MODEL_PROVIDER=model_provider, CONNECT_METHODS="")
